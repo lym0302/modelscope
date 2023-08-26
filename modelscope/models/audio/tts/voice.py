@@ -265,7 +265,7 @@ class Voice:
         self.voc_model.remove_weight_norm()
         self.voc_model.eval().to(self.device)
 
-    def am_forward(self, symbol_seq):
+    def am_forward(self, symbol_seq, return_dur: bool=False):
         with self.lock:
             with torch.no_grad():
                 inputs_feat_lst = self.ling_unit.encode_symbol_sequence(
@@ -332,6 +332,9 @@ class Voice:
                         mel_post,
                         norm_type=self.nsf_norm_type,
                         f0_feature=self.f0_feature)
+                if return_dur:
+                    dur = (torch.exp(res["log_duration_predictions"]) - 1 + 0.5).long().squeeze().cpu().numpy()
+                    return mel_post, dur
                 return mel_post
 
     def vocoder_forward(self, melspec):
@@ -651,3 +654,15 @@ class Voice:
                 self.load_vocoder()
                 self.model_loaded = True
         return self.vocoder_forward(self.am_forward(symbol_seq))
+    
+    
+    # add return dur
+    def forward2(self, symbol_seq):
+        with self.lock:
+            if not self.model_loaded:
+                self.load_am()
+                self.load_vocoder()
+                self.model_loaded = True
+        mel, dur = self.am_forward(symbol_seq, return_dur=True)
+        audio = self.vocoder_forward(mel)
+        return audio, dur

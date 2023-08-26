@@ -35,8 +35,8 @@ class TextToSpeechSambertHifiganPipeline(Pipeline):
         Returns:
             Dict[str, np.ndarray]: {OutputKeys.OUTPUT_PCM : np.ndarray(16bit pcm data)}
         """
-        output_wav = self.model.forward(input, forward_params.get('voice'))
-        return {OutputKeys.OUTPUT_WAV: output_wav}
+        output_wav, symbol, dur = self.model.forward2(input, forward_params.get('voice'))
+        return {OutputKeys.OUTPUT_WAV: output_wav, OutputKeys.INPUT_IDS: symbol, OutputKeys.PREDICTION: dur}
 
     def postprocess(self, inputs: Dict[str, Any],
                     **postprocess_params) -> Dict[str, Any]:

@@ -190,6 +190,12 @@ class SambertHifigan(Model):
             raise TtsVoiceNotExistsException(
                 f'modelscope error: Voice {voice_name} not exists')
         return self.voices[voice_name].forward(text)
+    
+    def synthesis_one_sentences2(self, voice_name, text):
+        if voice_name not in self.voices:
+            raise TtsVoiceNotExistsException(
+                f'modelscope error: Voice {voice_name} not exists')
+        return self.voices[voice_name].forward2(text)
 
     def train(self,
               voice,
@@ -273,3 +279,23 @@ class SambertHifigan(Model):
             audio = 32768.0 * audio
             audio_total = np.append(audio_total, audio.astype('int16'), axis=0)
         return ndarray_pcm_to_wav(self.sample_rate, audio_total)
+    
+    def forward2(self, text: str, voice_name: str = None):
+        voice = self.default_voice_name
+        if voice_name is not None:
+            voice = voice_name
+        result = self.frontend.gen_tacotron_symbols(text)
+        texts = [s for s in result.splitlines() if s != '']
+        audio_total = np.empty((0), dtype='int16')
+        dur_total = np.empty((0), dtype='int16')
+        symbols = []
+        for line in texts:
+            line = line.strip().split('\t')
+            audio, dur = self.synthesis_one_sentences2(voice, line[1])
+            audio = 32768.0 * audio
+            audio_total = np.append(audio_total, audio.astype('int16'), axis=0)
+            dur_total = np.append(dur_total, dur.astype('int16'), axis=0)
+            symbols += (line[1].split(" "))
+        print("ssssssssssssssssssssssssssssssss: ", symbols)
+        print("dddddddddddddddddddddddddddddddd: ", dur_total.tolist())
+        return ndarray_pcm_to_wav(self.sample_rate, audio_total), symbols, dur_total.tolist()
